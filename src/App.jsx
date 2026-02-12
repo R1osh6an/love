@@ -1,101 +1,86 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import confetti from "canvas-confetti"
 import "./App.css"
-
-function TypeText({ text, speed = 70, pause = 700, sound = true, className = "", onDone }) {
-  const [out, setOut] = useState("")
-  const [cursor, setCursor] = useState(true)
-  const [isTyping, setIsTyping] = useState(true)
-  const audioRef = useRef(null)
-
-  useEffect(() => {
-    audioRef.current = new Audio("/assets/type.mp3")
-    audioRef.current.volume = 0.15
-  }, [])
-
-  useEffect(() => {
-    let stopped = false
+function TypeText({text,speed=70,sound=true,className="",onDone }) {
+  const [out,setOut]=useState("")
+  const [cursor,setCursor]=useState(true)
+  const audioRef=useRef(null)
+  useEffect(()=>{
+    audioRef.current=new Audio("/assets/type.mp3")
+    audioRef.current.volume=0.15
+  },[])
+  useEffect(()=>{
+    let i=0
     setOut("")
-    setIsTyping(true)
-    const sentences = text.split("\n\n")
-    let sIndex = 0
-    let cIndex = 0
-
-    const type = () => {
-      if (stopped) return
-      const current = sentences[sIndex]
-      if (cIndex < current.length) {
-        const ch = current.charAt(cIndex)
-        setOut(p => p + ch)
-        if (sound && audioRef.current && ch !== " ") {
-          audioRef.current.currentTime = 0
-          audioRef.current.play().catch(() => {})
+    const interval=setInterval(()=>{
+      if (i<text.length) {
+        const ch=text[i]
+        setOut((p)=>p+ch)
+        if (sound && audioRef.current&&ch!==" "){
+          audioRef.current.currentTime=0
+          audioRef.current.play().catch(()=>{})
         }
-        cIndex++
-      } else {
-        sIndex++
-        cIndex = 0
-        if (sIndex >= sentences.length) {
-          setIsTyping(false)
-          onDone && onDone()
-          return
-        }
-        setOut(p => p + "\n\n")
+        i++
+      }else{
+        clearInterval(interval)
+        onDone&&onDone()
       }
-    }
-
-    const interval = setInterval(type, speed)
-    return () => {
-      stopped = true
-      clearInterval(interval)
-    }
-  }, [text, speed, pause, sound, onDone])
-
-  useEffect(() => {
-    if (!isTyping) return
-    const c = setInterval(() => setCursor(p => !p), 500)
-    return () => clearInterval(c)
-  }, [isTyping])
-
+    },speed)
+    return()=>clearInterval(interval)
+  },[text,speed,sound,onDone])
+  useEffect(()=>{
+    const c=setInterval(()=>setCursor((p)=>!p),500)
+    return()=>clearInterval(c)
+  },[])
   return (
-    <div className={className} style={{ whiteSpace: "pre-line" }}>
+    <div className={className}style={{whiteSpace:"pre-line" }}>
       {out}
-      {isTyping && <span className="cursor">{cursor ? "|" : " "}</span>}
+      <span className="cursor">{cursor ? "|" : " "}</span>
     </div>
   )
 }
-
 export default function App() {
-  const [stage, setStage] = useState("ask")
-  const [noPos, setNoPos] = useState({ top: "70px", left: "160px" })
-  const [noCount, setNoCount] = useState(0)
-  const [showByeBtn, setShowByeBtn] = useState(false)
+  const [stage, setStage] = useState("introVideo")
+  const [noMode, setNoMode] = useState(false) // ⭐ CHANGE 1 (keep)
+  const [showvarataaaBtn, setShowvarataaaBtn] = useState(false)
   const [giftDone, setGiftDone] = useState(false)
-  const [byeDone, setByeDone] = useState(false)
-  const lock = useRef(false)
+  const [varataaaDone, setvarataaaDone] = useState(false)
   const bgMusic = useRef(null)
-  const musicStarted = useRef(false)
-
-  const proposalVideos = [
-    "/assets/propose1.mp4",
-    "/assets/propose2.mp4",
-    "/assets/propose3.mp4",
-    "/assets/propose4.mp4",
-    "/assets/propose5.mp4",
-  ]
-
+  const introAudio = useRef(null)
+  const noAudio = useRef(null)
+  const image2Ref = useRef(null)
   useEffect(() => {
     bgMusic.current = new Audio("/assets/bg.mp3")
     bgMusic.current.loop = true
     bgMusic.current.volume = 0.25
+
+    introAudio.current = new Audio("/assets/audio1.mp3")
+    noAudio.current = new Audio("/assets/audio2.mp3")
   }, [])
-
-  const startMusic = () => {
-    if (musicStarted.current) return
-    musicStarted.current = true
-    bgMusic.current.play().catch(() => {})
+  const startIntro = () => {
+    introAudio.current.play().catch(() => {})
+    setStage("introImage")
+    setTimeout(() => {
+      setStage("ask")
+    }, 2000)
   }
-
+  const startMusic = () => {
+    bgMusic.current?.play().catch(() => {})
+  }
+  const handleNo = () => {
+    if (noMode) return
+    setNoMode(true)
+    noAudio.current.currentTime = 0
+    noAudio.current.play().catch(() => {})
+    setTimeout(() => {
+      image2Ref.current?.play()
+    }, 50)
+  }
+  const accept = () => {
+    startMusic()
+    confetti({ particleCount: 220, spread: 90, shapes: ["heart"] })
+    setStage("after")
+  }
   const hearts = useMemo(
     () =>
       Array.from({ length: 14 }).map(() => ({
@@ -104,145 +89,135 @@ export default function App() {
       })),
     []
   )
-
-  const moveNo = () => {
-    if (lock.current) return
-    lock.current = true
-    navigator.vibrate && navigator.vibrate(30)
-    setNoCount(p => p + 1)
-
-    setTimeout(() => {
-      lock.current = false
-    }, 900)
-
-    const box = document.querySelector(".buttons")
-    const yes = document.querySelector(".yes")
-    if (!box || !yes) return
-    const b = box.getBoundingClientRect()
-    const y = yes.getBoundingClientRect()
-    let x, yPos
-    do {
-      x = Math.random() * (b.width - 100) + 10
-      yPos = Math.random() * (b.height - 50) + 10
-    } while (Math.hypot(b.left + x - y.left, b.top + yPos - y.top) < 90)
-
-    setNoPos({ left: `${x}px`, top: `${yPos}px` })
-  }
-
-  const accept = () => {
-    startMusic()
-    confetti({
-      particleCount: 220,
-      spread: 90,
-      shapes: ["heart"],
-      colors: ["#ff4d6d", "#ff85a1", "#ffb3c6"],
-    })
-    setStage("after")
-  }
-
-  const currentProposal =
-    noCount === 0
-      ? "/assets/beforeyes.mp4"
-      : proposalVideos[(noCount - 1) % proposalVideos.length]
-
   return (
-    <div className="valentine">
+    <div className="kadhali">
       {hearts.map((h, i) => (
         <div key={i} className="heart" style={{ left: h.left, animationDelay: h.delay }}>
           ❤️
         </div>
       ))}
-
-      {stage === "ask" && (
+      {stage === "introVideo" && (
+        <div className="intro-full" onClick={startIntro}>
+          <video
+            src="/assets/intro.mp4"
+            autoPlay
+            muted
+            playsInline
+            className="intro-video"
+          />
+        </div>
+      )}
+      {stage === "introImage" && (
         <div className="card">
-          <TypeText text="💌 Sudar! you will be my Girlfriend?" speed={65} />
-
           <div className="media">
-            <video src={currentProposal} autoPlay muted loop playsInline />
-          </div>
-
-          <div className="buttons">
-            <button className="yes" onClick={accept}>YES 💖</button>
-            <button
-              className="no"
-              style={noPos}
-              onMouseEnter={moveNo}
-              onTouchStart={e => { e.preventDefault(); moveNo() }}
-            >
-              NO 💔
-            </button>
+            <img src="/assets/image1.png" alt="" />
           </div>
         </div>
       )}
-
+     {stage === "ask" && (
+        <div className="card">
+          {!noMode && (
+            <>
+              <TypeText text="💌 RP! will you marry me?" speed={65} />
+              <div className="media">
+                <video src="/assets/beforeyes.mp4" autoPlay muted loop playsInline />
+              </div>
+            </>
+          )}
+          {noMode && (
+            <div className="media">
+              <video ref={image2Ref} src="/assets/image2.mp4" playsInline />
+            </div>
+          )}
+          <div className="buttons">
+            <button
+              className="yes"
+              onClick={accept}
+              style={{
+                position: noMode ? "absolute" : "relative",
+                left: noMode ? "50%" : "0",
+                top: noMode ? "50%" : "0",
+                transform: noMode
+                  ? "translate(-50%,-50%) scale(1.6)"
+                  : "scale(1)"
+              }}
+            >
+              YES 💖
+            </button>
+            {!noMode && (
+              <button className="no" onClick={handleNo}>
+                NO 💔
+              </button>
+            )}
+          </div>
+        </div>
+      )}  
       {stage === "after" && (
         <div className="card done">
           <div className="media">
             <video src="/assets/afteryes.mp4" autoPlay muted loop playsInline />
           </div>
           <TypeText
-            text="Haan… Vaazhthukkal Vaazhtukkal 💐 You are officially my girlfriend 🤍"
+            text="Haan… Vaazhthukkal 💐 You are officially my pondatti 🤍"
             speed={75}
             onDone={() => setTimeout(() => setStage("gift"), 1800)}
           />
         </div>
       )}
-
       {stage === "gift" && (
         <div className="gift-card">
-          <TypeText text="🎁 A Little From My Heart" speed={80} />
+          <TypeText text="🎁 A Words From My Heart" speed={80} />
           <div className="gift-frame">
             <img src="/assets/mygirl.png" alt="" />
           </div>
-
           {!giftDone ? (
             <TypeText
-              text={`Although you have already said no, I find myself lingering in a space of unanswered emotions, uncertain of their origin yet unable to dismiss them.
+              text={`Every moment with you feels like a dream I never want to wake from ❤️.
 
-I respect your feelings and your decision without reservation. Nothing I feel seeks to alter that truth.
+You are my smile, my joy, and my everything 💕.
 
-Still, with quiet sincerity, I love you.
+My heart beats for you, today and always ❤️.
 
-You were a very nice girl. Thank you for being nice 🤍`}
+With you, every day is Valentine’s Day 💖.
+
+You’re my favorite hello and my hardest goodbye 💘"`}
               speed={65}
-              onDone={() => { setGiftDone(true); setShowByeBtn(true) }}
+              onDone={() => { setGiftDone(true); setShowvarataaaBtn(true) }}
             />
           ) : (
             <div style={{ whiteSpace: "pre-line" }}>
-              Although you have already said no, I find myself lingering in a space of unanswered emotions, uncertain of their origin yet unable to dismiss them.
+              Every moment with you feels like a dream I never want to wake from ❤️.
 
-              I respect your feelings and your decision without reservation. Nothing I feel seeks to alter that truth.
+You are my smile, my joy, and my everything 💕.
 
-              Still, with quiet sincerity, I love you.
+My heart beats for you, today and always ❤️.
 
-              You were a very nice girl. Thank you for being nice 🤍
+With you, every day is Valentine’s Day 💖.
+
+You’re my favorite hello and my hardest goodbye 💘
             </div>
           )}
-
-          {showByeBtn && (
-            <button className="bye-btn" onClick={() => setStage("bye")}>
-              Bye 👋
+          {showvarataaaBtn && (
+            <button className="varataaa-btn" onClick={() => setStage("varataaa")}>
+              byee 👋
             </button>
           )}
         </div>
       )}
-
-      {stage === "bye" && (
-        <div className="bye-page">
+      {stage === "varataaa" && (
+        <div className="varataaa-page">
           <div className="media">
-            <video src="/assets/bye.mp4" autoPlay muted loop playsInline />
+            <video src="/assets/varataaa.mp4" autoPlay muted loop playsInline />
           </div>
-          {!byeDone ? (
+          {!varataaaDone ? (
             <TypeText
-              text="Always wishing you happiness. This was fun, don’t take it seriously. Take care 🌸"
+              text="Always wishing you happiness. Take care maa...🌸"
               speed={85}
-              onDone={() => setByeDone(true)}
+              onDone={() => setvarataaaDone(true)}
             />
           ) : (
             <div style={{ whiteSpace: "pre-line" }}>
-              Always wishing you happiness. This was fun, don’t take it seriously.
-
-              Take care 🌸
+              Always wishing you happiness. Take care maa..🌸
             </div>
           )}
         </div>
